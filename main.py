@@ -7,11 +7,15 @@ from contour_selection import remove_background, remove_small_area, remove_outer
 from block_detection import get_blocks
 from wedge_detection import get_wedge
 from pulley_detection import get_pulley
+from rope import rope
+from block import block
+from solve import solve_rope
+
 ap = argparse.ArgumentParser()
 ap.add_argument('-i','--image', type=str, required=False, help="Input image location")
 args = vars(ap.parse_args())
 
-for image_loc in ['images/Pulley_Ex1.png','images/Pulley_Ex2.png','images/Pulley_Ex3.png','images/Pulley_Ex4.png','images/Pulley_Ex5.png']:
+for image_loc in ['images/Pulley_Ex2.png','images/Pulley_Ex3.png','images/Pulley_Ex4.png','images/Pulley_Ex5.png']:
     if args['image'] is not None:
         image_loc = args['image']
 
@@ -37,24 +41,40 @@ for image_loc in ['images/Pulley_Ex1.png','images/Pulley_Ex2.png','images/Pulley
 
     contours, blocks = get_blocks(img, contour=contours)
     contours, wedge = get_wedge(img=thresh_rev, contour = contours)
-    contours, pulley = get_pulley(img=thresh_rev,contour=contours)
+    pulley = get_pulley(img=img)
 
+    objects = dict()
+    s1 = rope('s1', pulley[0], 'b1', 'b2')
+    b1 = block('b1', 's1', (pulley[0][0],pulley[0][1]), blocks[0], m = 10)
+    b2 = block('b2', 's1', (pulley[0][0],pulley[0][1]), blocks[1], m = 5)
 
-    black_bg = np.zeros(img.shape, dtype=np.uint8)
+    objects['s1'] = s1
+    objects['b1'] = b1
+    objects['b2'] = b2 
+
+    objects = solve_rope('s1', objects = objects)
+    print(s1.a, s1.T)
+    
+    img_copy = img
+    cv2.rectangle(img_copy, (10,30), (200,70),(100,200,100), -1)
+    cv2.putText(img_copy, 'Accelaration: '+str(abs(round(s1.a,2))) + ' m/s^2', (20,45), cv2.FONT_HERSHEY_SIMPLEX, 0.4, (255,0,0), 1, cv2.LINE_AA)
+    cv2.putText(img_copy, 'Tension: '+str(abs(round(s1.T,2)))+ ' N', (20,65), cv2.FONT_HERSHEY_SIMPLEX, 0.4, (255,0,0), 1, cv2.LINE_AA)
+
+    white_bg = np.ones(img.shape, dtype=np.uint8)*255
     
     if wedge is not None:
-        cv2.drawContours(black_bg,[wedge],-1,(0,255,0),1)
-        cv2.fillPoly(black_bg,pts = [wedge], color=(0,255,0))
+        cv2.drawContours(white_bg,[wedge],-1,(0,255,0),1)
+        cv2.fillPoly(white_bg,pts = [wedge], color=(0,255,0))
 
     for i in range(len(blocks)):
         c = blocks[i]
-        cv2.drawContours(black_bg,[c],-1,(0,0,255),1)
-        cv2.fillPoly(black_bg,pts = [c], color=(0,0,255))
+        cv2.drawContours(white_bg,[c],-1,(0,0,255),1)
+        cv2.fillPoly(white_bg,pts = [c], color=(0,0,255))
+        # print(blocks[0])
+    for p in pulley:
+        cv2.circle(white_bg,(p[0],p[1]),p[2],(255,0,0),-1)
 
-
-    cv2.drawContours(black_bg,[pulley],-1,(255,0,0),1)
-    cv2.fillPoly(black_bg,pts = [pulley], color=(255,0,0))
-    cv2.imshow('Image_test',black_bg)
+    cv2.imshow('Image_test',img_copy)
     cv2.waitKey(0)
     cv2.destroyAllWindows()
-    cv2.imwrite('output_'+image_loc[:-4]+'output.jpg', black_bg)
+    cv2.imwrite('output_'+image_loc[:-4]+'_res_output.jpg', img_copy)
