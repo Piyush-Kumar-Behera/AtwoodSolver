@@ -1,7 +1,15 @@
 import numpy as np
 import cv2
 import matplotlib.pyplot as plt
-def equalizeHistogram(image = None, max_hist_val = 200):
+def equalizeHistogram(image, max_hist_val = 200):
+    '''
+    Input: 
+    image: Grayscale input image
+    max_hist_val: The maximum value of pixel intesity to be considered by histogram, to compensate for the domination of 
+                  higher intensity value(white background)
+
+    Output: The returned image's pixel distribution upto max_hist_val pixel is equalized 
+    '''
     hist, bins = np.histogram(image.flatten(), max_hist_val, [0,max_hist_val])
 
     cdf = hist.cumsum()

@@ -20,6 +20,8 @@ for image_loc in ['images/Pulley_Ex2.png','images/Pulley_Ex3.png','images/Pulley
         image_loc = args['image']
 
     img = cv2.imread(image_loc)
+
+    #Median Blur to remove text and rope conecting blocks and pulleys
     median_blur = cv2.medianBlur(img, 11)
     gray_mb = cv2.cvtColor(median_blur, cv2.COLOR_BGR2GRAY)
 
@@ -29,20 +31,36 @@ for image_loc in ['images/Pulley_Ex2.png','images/Pulley_Ex3.png','images/Pulley
     # Custom Histogram Equalization 
     hist_equa = equalizeHistogram(gray_mb)
 
+    # Canny Edge detector for edge detection
     mid = cv2.Canny(hist_equa, 10, 200)
+
+    # Increasing width of the edges for continuous edges and better contour separation 
     thresh_emp = emphasize_white(mid, filter_size=(5,5))
     thresh_rev = 255-thresh_emp
-
+    
+    #-----------------Contour Extraction----------------------
+    # Finding all contours in the image with a tree hierarchy
     contours, hierarchy = cv2.findContours(thresh_rev, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+
+    # remove contour representing the background
     contours, hierarchy = remove_background(img = thresh_rev, hierarchy=hierarchy, contour = contours)
+    
+    # remove small patches of contours
     contours, hierarchy = remove_small_area(img = thresh_rev, hierarchy=hierarchy, contour = contours)
 
+    # removal of contours enclosing other contours in a parent-child hierarchy
     contours, hierarchy = remove_outer_contour(img = thresh_rev, hierarchy = hierarchy, contour = contours)
 
+
+    #-----------------------Object Extraction---------------------
+    # Module function call for block, wedge and pulley detection
     contours, blocks = get_blocks(img, contour=contours)
     contours, wedge = get_wedge(img=thresh_rev, contour = contours)
     pulley = get_pulley(img=img)
 
+
+    #---------------------Solver---------------------
+    # Creating string, block objects for solver 
     objects = dict()
     s1 = rope('s1', pulley[0], 'b1', 'b2')
     b1 = block('b1', 's1', (pulley[0][0],pulley[0][1]), blocks[0], m = 10)
@@ -55,6 +73,9 @@ for image_loc in ['images/Pulley_Ex2.png','images/Pulley_Ex3.png','images/Pulley
     objects = solve_rope('s1', objects = objects)
     print(s1.a, s1.T)
     
+
+
+    # ----------------For representing the image------------- 
     img_copy = img
     cv2.rectangle(img_copy, (10,30), (200,70),(100,200,100), -1)
     cv2.putText(img_copy, 'Accelaration: '+str(abs(round(s1.a,2))) + ' m/s^2', (20,45), cv2.FONT_HERSHEY_SIMPLEX, 0.4, (255,0,0), 1, cv2.LINE_AA)
@@ -78,3 +99,6 @@ for image_loc in ['images/Pulley_Ex2.png','images/Pulley_Ex3.png','images/Pulley
     cv2.waitKey(0)
     cv2.destroyAllWindows()
     cv2.imwrite('output_'+image_loc[:-4]+'_res_output.jpg', img_copy)
+
+    if args['image'] is not None:
+        break
