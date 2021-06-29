@@ -23,3 +23,9 @@ python main.py
 or with a particular image:
 ```shell
 python main.py -i image_loc
+```
+
+## Solver
+1. Acceleration and Tension are assumed to be the features of the string rather than blocks, pulley isn't cosidered in the solving of single pulley systems.
+2. Two equations are formed corresponding to each block, according to the angle they make with the gravitational force.
+3. The equations are solved for acceleration, tension of the string, with the corresponding direction.
